@@ -26,7 +26,7 @@
 	import LayoutRow from "@graphite/components/layout/LayoutRow.svelte";
 	import IconButton from "@graphite/components/widgets/buttons/IconButton.svelte";
 	import TextButton from "@graphite/components/widgets/buttons/TextButton.svelte";
-	import IconLabel from "@graphite/components/widgets/labels/IconLabel.svelte";
+	// import IconLabel from "@graphite/components/widgets/labels/IconLabel.svelte";
 	import TextLabel from "@graphite/components/widgets/labels/TextLabel.svelte";
 	import UserInputLabel from "@graphite/components/widgets/labels/UserInputLabel.svelte";
 
@@ -147,7 +147,7 @@
 			<LayoutCol class="empty-panel" on:dragover={(e) => e.preventDefault()} on:drop={dropFile}>
 				<LayoutCol class="content">
 					<LayoutRow class="logotype">
-						<IconLabel icon="GraphiteLogotypeSolid" />
+						<img src="/images/logo.png" alt="Logo" />
 					</LayoutRow>
 					<LayoutRow class="actions">
 						<table>
@@ -317,7 +317,7 @@
 					.logotype {
 						margin-bottom: 40px;
 
-						svg {
+						img {
 							width: auto;
 							height: 120px;
 						}
