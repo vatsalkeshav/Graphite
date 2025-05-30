@@ -37,7 +37,7 @@
 
 	$: docIndex = $portfolio.activeDocumentIndex;
 	$: displayName = $portfolio.documents[docIndex]?.displayName || "";
-	$: windowTitle = `${displayName}${displayName && " - "}Graphite`;
+	$: windowTitle = `${displayName}${displayName && " - "}DesignAI`;
 
 	onMount(() => {
 		const arraysEqual = (a: KeyRaw[], b: KeyRaw[]): boolean => a.length === b.length && a.every((aValue, i) => aValue === b[i]);

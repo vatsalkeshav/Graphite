@@ -34,8 +34,8 @@
 			}
 		}
 	},
-	"productName": "Graphite",
-	"mainBinaryName": "Graphite",
+	"productName": "DesignAI",
+	"mainBinaryName": "DesignAI",
 	"version": "0.1.0",
 	"identifier": "rs.graphite.editor",
 	"plugins": {},
@@ -47,7 +47,7 @@
 				"fullscreen": false,
 				"height": 1080,
 				"resizable": true,
-				"title": "Graphite",
+				"title": "DesignAI",
 				"width": 1920,
 				"useHttpsScheme": true
 			}
