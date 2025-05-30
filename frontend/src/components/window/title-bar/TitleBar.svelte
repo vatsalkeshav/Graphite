@@ -76,7 +76,7 @@
 			<WindowButtonsMac {maximized} />
 		{:else}
 			{#each entries as entry}
-				<TextButton label={entry.label} icon={entry.icon} menuListChildren={entry.children} action={entry.action} flush={true} />
+				<TextButton label={entry.label} menuListChildren={entry.children} action={entry.action} flush={true} />
 			{/each}
 		{/if}
 	</LayoutRow>
