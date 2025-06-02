@@ -3,6 +3,7 @@
 
 	import type { MenuListEntry } from "@graphite/messages";
 	import type { FontsState } from "@graphite/state-providers/fonts";
+	import type { FontStyle } from "@graphite/state-providers/fonts";
 
 	import MenuList from "@graphite/components/floating-menus/MenuList.svelte";
 	import LayoutRow from "@graphite/components/layout/LayoutRow.svelte";
@@ -33,7 +34,6 @@
 	$: watchFont(fontFamily, fontStyle);
 
 	async function watchFont(..._: string[]) {
-		// We set this function's result to a local variable to avoid reading from `entries` which causes Svelte to trigger an update that results in an infinite loop
 		const newEntries = await getEntries();
 		entries = newEntries;
 		activeEntry = getActiveEntry(newEntries);
@@ -41,10 +41,7 @@
 
 	async function setOpen() {
 		open = true;
-
-		// Scroll to the active entry (the scroller div does not yet exist so we must wait for the component to render)
 		await tick();
-
 		if (activeEntry) {
 			const index = entries.indexOf(activeEntry);
 			menuList?.scrollViewTo(Math.max(0, index * 20 - 190));
@@ -54,51 +51,59 @@
 	function toggleOpen() {
 		if (!disabled) {
 			open = !open;
-
 			if (open) setOpen();
 		}
 	}
 
 	async function selectFont(newName: string) {
-		let family;
-		let style;
+		let family: string;
+		let style: FontStyle;
 
 		if (isStyle) {
 			dispatch("fontStyle", newName);
-
 			family = fontFamily;
-			style = newName;
+			style = newName as FontStyle;
 		} else {
 			dispatch("fontFamily", newName);
-
 			family = newName;
-			style = "Regular (400)";
+			style = "Regular (400)" as FontStyle; // Default to Regular when changing font family
 		}
 
 		const fontFileUrl = await fonts.getFontFileUrl(family, style);
 		dispatch("changeFont", { fontFamily: family, fontStyle: style, fontFileUrl });
+
+		// Close the menu after selection
+		open = false;
 	}
 
 	async function getEntries(): Promise<MenuListEntry[]> {
-		const x = isStyle ? fonts.getFontStyles(fontFamily) : fonts.fontNames();
-		return (await x).map((entry: { name: string; url: URL | undefined }) => ({
-			label: entry.name,
-			value: entry.name,
-			font: entry.url,
-			action: () => selectFont(entry.name),
-		}));
+		try {
+			const x = isStyle ? fonts.getFontStyles(fontFamily) : fonts.fontNames();
+			const entries = await x;
+			return entries.map((entry: { name: string; url: URL | undefined }) => ({
+				label: entry.name,
+				value: entry.name,
+				font: entry.url,
+				action: () => selectFont(entry.name),
+			}));
+		} catch (error) {
+			console.error("Error getting font entries:", error);
+			return [];
+		}
 	}
 
-	function getActiveEntry(entries: MenuListEntry[]): MenuListEntry {
+	function getActiveEntry(entries: MenuListEntry[]): MenuListEntry | undefined {
 		const selectedChoice = isStyle ? fontStyle : fontFamily;
-
-		return entries.find((entry) => entry.value === selectedChoice) as MenuListEntry;
+		return entries.find((entry) => entry.value === selectedChoice);
 	}
 
 	onMount(async () => {
-		entries = await getEntries();
-
-		activeEntry = getActiveEntry(entries);
+		try {
+			entries = await getEntries();
+			activeEntry = getActiveEntry(entries);
+		} catch (error) {
+			console.error("Error in FontInput onMount:", error);
+		}
 	});
 </script>
 
@@ -106,7 +111,7 @@
 <LayoutRow class="font-input">
 	<LayoutRow
 		class="dropdown-box"
-		classes={{ disabled }}
+		classes={{ disabled, open }}
 		styles={{ ...(minWidth > 0 ? { "min-width": `${minWidth}px` } : {}) }}
 		{tooltip}
 		tabindex={disabled ? -1 : 0}
@@ -140,11 +145,14 @@
 			background: var(--color-1-nearblack);
 			height: 24px;
 			border-radius: 2px;
+			cursor: pointer;
 
 			.dropdown-label {
 				margin: 0;
 				margin-left: 8px;
 				flex: 1 1 100%;
+				overflow: hidden;
+				text-overflow: ellipsis;
 			}
 
 			.dropdown-arrow {
@@ -167,6 +175,7 @@
 
 			&.disabled {
 				background: var(--color-2-mildblack);
+				cursor: not-allowed;
 
 				span {
 					color: var(--color-8-uppergray);
@@ -177,6 +186,10 @@
 		.menu-list .floating-menu-container .floating-menu-content {
 			max-height: 400px;
 			padding: 4px 0;
+			background: var(--color-1-nearblack);
+			border: 1px solid var(--color-3-darkgray);
+			border-top: none;
+			border-radius: 0 0 2px 2px;
 		}
 	}
 </style>

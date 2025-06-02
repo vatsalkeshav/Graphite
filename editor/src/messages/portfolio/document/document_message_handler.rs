@@ -31,6 +31,7 @@ use graph_craft::document::value::TaggedValue;
 use graph_craft::document::{NodeId, NodeInput, NodeNetwork, OldNodeNetwork};
 use graphene_core::raster::BlendMode;
 use graphene_core::raster::image::ImageFrameTable;
+use graphene_core::text::Font;
 use graphene_core::vector::style::ViewMode;
 use graphene_std::renderer::{ClickTarget, Quad};
 use graphene_std::vector::{PointId, path_bool_lib};
@@ -2058,6 +2059,13 @@ impl DocumentMessageHandler {
 	/// Loads all of the fonts in the document.
 	pub fn load_layer_resources(&self, responses: &mut VecDeque<Message>) {
 		let mut fonts = HashSet::new();
+
+		// Add default font first to ensure it's always loaded
+		let default_font = Font::default();
+		fonts.insert(default_font.clone());
+		responses.add_front(FrontendMessage::TriggerFontLoad { font: default_font.clone() });
+
+		// Collect all fonts used in the document
 		for (_node_id, node) in self.document_network().recursive_nodes() {
 			for input in &node.inputs {
 				if let Some(TaggedValue::Font(font)) = input.as_value() {
@@ -2065,8 +2073,12 @@ impl DocumentMessageHandler {
 				}
 			}
 		}
+
+		// Load all other fonts after the default font
 		for font in fonts {
-			responses.add_front(FrontendMessage::TriggerFontLoad { font });
+			if font != default_font {
+				responses.add_front(FrontendMessage::TriggerFontLoad { font: font.clone() });
+			}
 		}
 	}
 

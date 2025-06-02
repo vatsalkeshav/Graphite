@@ -17,6 +17,7 @@ use crate::messages::tool::common_functionality::utility_functions::text_boundin
 use graph_craft::document::value::TaggedValue;
 use graph_craft::document::{NodeId, NodeInput};
 use graphene_core::Color;
+use graphene_core::consts::{DEFAULT_FONT_FAMILY, DEFAULT_FONT_STYLE};
 use graphene_core::renderer::Quad;
 use graphene_core::text::{Font, FontCache, TypesettingConfig, lines_clipping, load_face};
 use graphene_core::vector::style::Fill;
@@ -40,11 +41,11 @@ pub struct TextOptions {
 impl Default for TextOptions {
 	fn default() -> Self {
 		Self {
-			font_size: 24.,
+			font_size: 24.0,
 			line_height_ratio: 1.2,
-			character_spacing: 1.,
-			font_name: graphene_core::consts::DEFAULT_FONT_FAMILY.into(),
-			font_style: graphene_core::consts::DEFAULT_FONT_STYLE.into(),
+			character_spacing: 1.0,
+			font_name: DEFAULT_FONT_FAMILY.to_string(),
+			font_style: DEFAULT_FONT_STYLE.to_string(),
 			fill: ToolColorOptions::new_primary(),
 		}
 	}
@@ -351,6 +352,22 @@ impl TextToolData {
 
 		self.layer = layer;
 		if self.load_layer_text_node(document).is_some() {
+			// Ensure the font is loaded before proceeding
+			if let Some(editing_text) = &self.editing_text {
+				if !font_cache.loaded_font(&editing_text.font) {
+					// Try to get a fallback font
+					if let Some(fallback_font) = font_cache.resolve_font(&editing_text.font) {
+						let mut editing_text = editing_text.clone();
+						editing_text.font = fallback_font.clone();
+						self.editing_text = Some(editing_text);
+					} else {
+						// Request font load and wait for it to complete
+						responses.add_front(FrontendMessage::TriggerFontLoad { font: editing_text.font.clone() });
+						return;
+					}
+				}
+			}
+
 			responses.add(DocumentMessage::AddTransaction);
 
 			self.set_editing(true, font_cache, responses);
@@ -365,7 +382,32 @@ impl TextToolData {
 		};
 	}
 
-	fn new_text(&mut self, document: &DocumentMessageHandler, editing_text: EditingText, font_cache: &FontCache, responses: &mut VecDeque<Message>) {
+	fn new_text(&mut self, document: &DocumentMessageHandler, mut editing_text: EditingText, font_cache: &FontCache, responses: &mut VecDeque<Message>) {
+		// Ensure the font is loaded before proceeding
+		if !font_cache.loaded_font(&editing_text.font) {
+			// Try to get a fallback font
+			if let Some(fallback_font) = font_cache.resolve_font(&editing_text.font) {
+				editing_text.font = fallback_font.clone();
+			} else {
+				// Request font load and wait for it to complete
+				responses.add_front(FrontendMessage::TriggerFontLoad { font: editing_text.font.clone() });
+				return;
+			}
+		}
+
+		// Double check that we have a valid font face
+		if font_cache.get(&editing_text.font).is_none() {
+			// If we still don't have a valid font, try to use the default font
+			let default_font = Font::default();
+			if font_cache.loaded_font(&default_font) {
+				editing_text.font = default_font;
+			} else {
+				// Request default font load and wait for it to complete
+				responses.add_front(FrontendMessage::TriggerFontLoad { font: default_font });
+				return;
+			}
+		}
+
 		// Create new text
 		self.new_text = String::new();
 		responses.add(DocumentMessage::AddTransaction);
